@@ -27,8 +27,7 @@ jobs:
     - name: Terraform init
       run: |
         cd ${{ env.TF_DATA_DIR }}
-        terraform init \
-          -input=false
+        terraform init
     - name: Terraform validation
       run: |
         cd ${{ env.TF_DATA_DIR }}
