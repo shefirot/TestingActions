@@ -9,6 +9,7 @@ jobs:
       group: ${{ github.repository }}
     runs-on: ubuntu-latest
     env:
+      ENVIRONMENT: develop
       TF_DATA_DIR: ${{ github.WORKSPACE }}/src
     steps:
     - name: Check out the code
@@ -21,18 +22,20 @@ jobs:
       uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1
       with:
         terraform_version: 1.2.4
-    - name: Verify Terraform version
+    - name: Verify Terraform
       run: |
         terraform --version
+    - name: Terraform workspace
+      run: |
+        terraform workspace new ${{ env.ENVIRONMENT }} || terraform workspace select ${{ env.ENVIRONMENT }}
     - name: Terraform init
       run: |
         cd ${{ env.TF_DATA_DIR }}
-        cat *
-        #terraform init
-#    - name: Terraform validation
-#      run: |
-#        cd ${{ env.TF_DATA_DIR }}
-#        terraform validate
+        terraform init
+    - name: Terraform validation
+      run: |
+        cd ${{ env.TF_DATA_DIR }}
+        terraform validate
     - name: Terraform plan
       run: |
         cd ${{ env.TF_DATA_DIR }}
