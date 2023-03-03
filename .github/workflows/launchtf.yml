@@ -1,0 +1,51 @@
+name: Launch TF
+permissions:
+  contents: write
+on:
+  workflow_dispatch:
+jobs:
+  deploy-test:
+    concurrency:
+      group: ${{ github.repository }}
+    runs-on: ubuntu-latest
+    env:
+      TF_DATA_DIR: ${{ github.WORKSPACE }}/src
+    steps:
+    - name: Check out the code
+      uses: actions/checkout@v3
+    - name: Install python 3
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.8"
+    - name: Install terraform
+      uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1
+      with:
+        terraform_version: 1.2.4
+    - name: Verify Terraform version
+      run: |
+        terraform --version
+    - name: Terraform init
+      run: |
+        cd ${{ env.TF_DATA_DIR }}
+        terraform init \
+          -input=false
+    - name: Terraform validation
+      run: |
+        cd ${{ env.TF_DATA_DIR }}
+        terraform validate
+    - name: Terraform plan
+      run: |
+        cd ${{ env.TF_DATA_DIR }}
+        terraform plan -out=deploy.tfplan
+    - name: Terraform apply
+      run: |
+        cd ${{ env.TF_DATA_DIR }}
+        terraform apply deploy.tfplan
+    - name: Commit report
+      if: ${{ always() }}
+      run: |
+        git config --global user.name ${{ github.actor }}
+        git pull
+        git add -f ${{ env.TF_DATA_DIR }}/terraform.tfs* || true
+        git commit -m "Autometed push terraform tfstate from deploy-caldera-server" || true
+        git push
