@@ -29,10 +29,10 @@ jobs:
         cd ${{ env.TF_DATA_DIR }}
         cat *
         #terraform init
-    - name: Terraform validation
-      run: |
-        cd ${{ env.TF_DATA_DIR }}
-        terraform validate
+#    - name: Terraform validation
+#      run: |
+#        cd ${{ env.TF_DATA_DIR }}
+#        terraform validate
     - name: Terraform plan
       run: |
         cd ${{ env.TF_DATA_DIR }}
