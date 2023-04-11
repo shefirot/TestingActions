@@ -67,8 +67,10 @@ jobs:
         env:
           issue_json: ${{ github.WORKSPACE }}/issue_data.json
         run: |
+          #Build all json body
           echo '{ "title": "${{ env.ISSUE_TITLE }}",' > ${issue_json}
           echo '"body": "' >> ${issue_json}
+          sed -i 's/"/\\"/g' ${{ env.ISSUE_BODY }}
           sed 's/$/\\n/' ${{ env.ISSUE_BODY }} >> ${issue_json}
           echo '",' >> ${issue_json}
           echo '"labels": ["bug","gitleaks"] }' >> ${issue_json}
