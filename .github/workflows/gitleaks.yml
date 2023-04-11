@@ -7,17 +7,13 @@ on:
         type: string
         description: Execution Runners
         required: true
-        default:
-      timeout-minutes:
-        type: number
-        description: Timeout to break the job.
-        required: false
-        default: 5
+        default: ubuntu-22.04
+
       who-open-issue:
         description: "The way to open the issue, if it's necessary"
         type: choice
         required: true
-        default: "GH-CLI"
+        default: "API"
         options:
           - API
           - GH-CLI
@@ -26,28 +22,19 @@ jobs:
   sast_gitleaks:
     name: Scan
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:                                                                         # Need write content to create issues
       issues: write
       contents: read
     env:
       GIT_LEAKS_DIR: ${{ github.WORKSPACE }}/gitleaks
+      ISSUE_TITLE: "Issue GitLeaks"
+      ISSUE_BODY: ${{ github.WORKSPACE }}/issue_body.md
     steps:
 
       - name: Checkout code
         uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3               # @v3.5.0
         with:
-          token: ${{ secrets.token }}
           fetch-depth: '0'                                                            # All commits
-
-      - name: Install gh cli
-        if: inputs.who-open-issue == 'GH-CLI'
-        run: |
-          cd ${{ github.WORKSPACE }}
-          wget https://github.com/cli/cli/releases/download/v2.25.1/gh_2.25.1_linux_amd64.tar.gz >/dev/null 2>&1
-          tar -xvzf gh_2.25.1_linux_amd64.tar.gz gh_2.25.1_linux_amd64/bin/gh --strip-components=2
-          chmod u+x gh
-          rm -f ./gh*.tar.gz >/dev/null 2>&1
 
       - name: Get GitLeaks
         run: |
@@ -65,13 +52,47 @@ jobs:
           cd ${{ env.GIT_LEAKS_DIR }}
           ./gitleaks detect --redact -v -s ${{ github.WORKSPACE }} -r ${{ github.WORKSPACE }}/report_gitleaks.txt
          
-      - name: Open Issue from GH cli
+      - name: Gen Issue body
+        if: ${{ failure() && steps.scan.outcome == 'failure'}}
+        run: |
+          echo "#SAST GitLeaks failed" > ${{ env.ISSUE_BODY }}
+          echo "## Log Details" >> ${{ env.ISSUE_BODY }}
+          echo "\`\`\`" >> ${{ env.ISSUE_BODY }}
+          cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> ${{ env.ISSUE_BODY }}
+          echo "\`\`\`" >> ${{ env.ISSUE_BODY }}
+
+      - name: Open Issue from curl
+        if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'API'}}
+        env:
+          issue_json: ${{ github.WORKSPACE }}/issue_data.json
+        run: |
+          #Build all json body
+          echo '{ "title": "${{ env.ISSUE_TITLE }}",' > ${issue_json}
+          echo '"body": "' >> ${issue_json}
+          sed -i 's/"/\\"/g' ${{ env.ISSUE_BODY }}
+          sed 's/$/\\n/' ${{ env.ISSUE_BODY }} >> ${issue_json}
+          echo '",' >> ${issue_json}
+          echo '"labels": ["bug","gitleaks","curl"] }' >> ${issue_json}
+          cat ${issue_json}
+          curl -L   -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ github.TOKEN }}"  \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          --data @${issue_json} \
+          https://api.github.com/repos/$GITHUB_REPOSITORY/issues
+
+      - name: Install gh cli
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
         run: |
           cd ${{ github.WORKSPACE }}
-          echo "#SAST GitLeaks failed" > issue_body.md
-          echo "## Log Details" >> issue_body.md
-          echo "\`\`\`" >> issue_body.md
-          cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> issue_body.md
-          echo "\`\`\`" >> issue_body.md
-          ./gh issue create --title "Issue SAST GitLeaks" --body-file issue_body.md --repo $GITHUB_REPOSITORY
+          wget https://github.com/cli/cli/releases/download/v2.25.1/gh_2.25.1_linux_amd64.tar.gz >/dev/null 2>&1
+          tar -xvzf gh_2.25.1_linux_amd64.tar.gz gh_2.25.1_linux_amd64/bin/gh --strip-components=2
+          chmod u+x gh
+          rm -f ./gh*.tar.gz >/dev/null 2>&1
+
+      - name: Open Issue from GH cli
+        if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
+        run: |
+          export GH_TOKEN=${{ github.TOKEN }}
+          #NOTE: Labels must be exist, GH cli can't create new labels
+          ./gh issue create --title "${{ env.ISSUE_TITLE }}" --label "bug,gitleaks,cli" --body-file ${{ env.ISSUE_BODY }} --repo $GITHUB_REPOSITORY
