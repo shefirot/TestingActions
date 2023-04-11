@@ -1,7 +1,7 @@
 name: Gitleaks
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       runs-on:
         type: string
