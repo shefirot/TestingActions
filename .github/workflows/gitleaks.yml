@@ -1,0 +1,77 @@
+name: Gitleaks
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: Execution Runners
+        required: true
+        default:
+      timeout-minutes:
+        type: number
+        description: Timeout to break the job.
+        required: false
+        default: 5
+      who-open-issue:
+        description: "The way to open the issue, if it's necessary"
+        type: choice
+        required: true
+        default: "GH-CLI"
+        options:
+          - API
+          - GH-CLI
+
+jobs:
+  sast_gitleaks:
+    name: Scan
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    permissions:                                                                         # Need write content to create issues
+      issues: write
+      contents: read
+    env:
+      GIT_LEAKS_DIR: ${{ github.WORKSPACE }}/gitleaks
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3               # @v3.5.0
+        with:
+          token: ${{ secrets.token }}
+          fetch-depth: '0'                                                            # All commits
+
+      - name: Install gh cli
+        if: inputs.who-open-issue == 'GH-CLI'
+        run: |
+          cd ${{ github.WORKSPACE }}
+          wget https://github.com/cli/cli/releases/download/v2.25.1/gh_2.25.1_linux_amd64.tar.gz >/dev/null 2>&1
+          tar -xvzf gh_2.25.1_linux_amd64.tar.gz gh_2.25.1_linux_amd64/bin/gh --strip-components=2
+          chmod u+x gh
+          rm -f ./gh*.tar.gz >/dev/null 2>&1
+
+      - name: Get GitLeaks
+        run: |
+          mkdir -p ${{ env.GIT_LEAKS_DIR }}
+          cd ${{ env.GIT_LEAKS_DIR }}
+          wget https://github.com/zricethezav/gitleaks/releases/download/v${{ vars.GIT_LEAKS_VERSION }}/gitleaks_${{ vars.GIT_LEAKS_VERSION }}_linux_x64.tar.gz >/dev/null 2>&1
+          tar -xvzf gitleaks_${{ vars.GIT_LEAKS_VERSION }}_linux_x64.tar.gz >/dev/null 2>&1
+          chmod +x gitleaks          
+
+      - name: Scan repository
+        id: scan
+        shell: bash
+        run: |
+          # Scan repository
+          cd ${{ env.GIT_LEAKS_DIR }}
+          ./gitleaks detect --redact -v -s ${{ github.WORKSPACE }} -r ${{ github.WORKSPACE }}/report_gitleaks.txt
+         
+      - name: Open Issue from GH cli
+        if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
+        run: |
+          cd ${{ github.WORKSPACE }}
+          echo "#SAST GitLeaks failed" > issue_body.md
+          echo "## Log Details" >> issue_body.md
+          echo "\`\`\`" >> issue_body.md
+          cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> issue_body.md
+          echo "\`\`\`" >> issue_body.md
+          ./gh issue create --title "Issue SAST GitLeaks" --body-file issue_body.md --repo $GITHUB_REPOSITORY
