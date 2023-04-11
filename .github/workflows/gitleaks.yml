@@ -7,7 +7,7 @@ on:
         type: string
         description: Execution Runners
         required: true
-        default:
+        default: ubuntu-22.04
       timeout-minutes:
         type: number
         description: Timeout to break the job.
