@@ -51,6 +51,15 @@ jobs:
           cd ${{ env.GIT_LEAKS_DIR }}
           ./gitleaks detect --redact -v -s ${{ github.WORKSPACE }} -r ${{ github.WORKSPACE }}/report_gitleaks.txt
          
+      - name: Gen Issue body
+        if: ${{ failure() && steps.scan.outcome == 'failure'}}
+        run: |
+          echo "#SAST GitLeaks failed" > ${{ github.WORKSPACE }}/issue_body.md
+          echo "## Log Details" >> ${{ github.WORKSPACE }}/issue_body.md
+          echo "\`\`\`" >> ${{ github.WORKSPACE }}/issue_body.md
+          cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> ${{ github.WORKSPACE }}/issue_body.md
+          echo "\`\`\`" >> ${{ github.WORKSPACE }}/issue_body.md
+
       - name: Install gh cli
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
         run: |
@@ -63,12 +72,6 @@ jobs:
       - name: Open Issue from GH cli
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
         run: |
-          export GH_TOKEN=${{ github.token }}
-          cd ${{ github.WORKSPACE }}
-          echo "#SAST GitLeaks failed" > issue_body.md
-          echo "## Log Details" >> issue_body.md
-          echo "\`\`\`" >> issue_body.md
-          cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> issue_body.md
-          echo "\`\`\`" >> issue_body.md
-          #./gh auth login --with-token $GITHUB_TOKEN
-          ./gh issue create --title "Issue GitLeaks" --body-file issue_body.md --repo $GITHUB_REPOSITORY
+          export GH_TOKEN=${{ github.TOKEN }}
+          #cd ${{ github.WORKSPACE }}
+          ./gh issue create --title "Issue GitLeaks" --body-file ${{ github.WORKSPACE }}/issue_body.md --repo $GITHUB_REPOSITORY
