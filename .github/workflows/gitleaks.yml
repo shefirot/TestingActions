@@ -63,12 +63,12 @@ jobs:
       - name: Open Issue from GH cli
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
         run: |
-          #export GH_TOKEN=$GITHUB_TOKEN
+          export GH_TOKEN=$GITHUB_TOKEN
           cd ${{ github.WORKSPACE }}
           echo "#SAST GitLeaks failed" > issue_body.md
           echo "## Log Details" >> issue_body.md
           echo "\`\`\`" >> issue_body.md
           cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> issue_body.md
           echo "\`\`\`" >> issue_body.md
-          ./gh auth login --with-token $GITHUB_TOKEN
+          #./gh auth login --with-token $GITHUB_TOKEN
           ./gh issue create --title "Issue GitLeaks" --body-file issue_body.md --repo $GITHUB_REPOSITORY
