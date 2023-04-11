@@ -8,11 +8,7 @@ on:
         description: Execution Runners
         required: true
         default: ubuntu-22.04
-      timeout-minutes:
-        type: number
-        description: Timeout to break the job.
-        required: false
-        default: '5'
+
       who-open-issue:
         description: "The way to open the issue, if it's necessary"
         type: choice
@@ -26,7 +22,6 @@ jobs:
   sast_gitleaks:
     name: Scan
     runs-on: ${{ inputs.runs-on }}
-    timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:                                                                         # Need write content to create issues
       issues: write
       contents: read
