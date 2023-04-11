@@ -34,14 +34,6 @@ jobs:
         with:
           fetch-depth: '0'                                                            # All commits
 
-      - name: Install gh cli
-        if: inputs.who-open-issue == 'GH-CLI'
-        run: |
-          cd ${{ github.WORKSPACE }}
-          wget https://github.com/cli/cli/releases/download/v2.25.1/gh_2.25.1_linux_amd64.tar.gz >/dev/null 2>&1
-          tar -xvzf gh_2.25.1_linux_amd64.tar.gz gh_2.25.1_linux_amd64/bin/gh --strip-components=2
-          chmod u+x gh
-          rm -f ./gh*.tar.gz >/dev/null 2>&1
 
       - name: Get GitLeaks
         run: |
@@ -59,6 +51,15 @@ jobs:
           cd ${{ env.GIT_LEAKS_DIR }}
           ./gitleaks detect --redact -v -s ${{ github.WORKSPACE }} -r ${{ github.WORKSPACE }}/report_gitleaks.txt
          
+      - name: Install gh cli
+        if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
+        run: |
+          cd ${{ github.WORKSPACE }}
+          wget https://github.com/cli/cli/releases/download/v2.25.1/gh_2.25.1_linux_amd64.tar.gz >/dev/null 2>&1
+          tar -xvzf gh_2.25.1_linux_amd64.tar.gz gh_2.25.1_linux_amd64/bin/gh --strip-components=2
+          chmod u+x gh
+          rm -f ./gh*.tar.gz >/dev/null 2>&1
+
       - name: Open Issue from GH cli
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
         run: |
