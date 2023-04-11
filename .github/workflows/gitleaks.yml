@@ -55,7 +55,7 @@ jobs:
       - name: Gen Issue body
         if: ${{ failure() && steps.scan.outcome == 'failure'}}
         run: |
-          echo "#SAST GitLeaks failed" > ${{ env.ISSUE_BODY }}
+          echo "# GitLeaks failed" > ${{ env.ISSUE_BODY }}
           echo "## Log Details" >> ${{ env.ISSUE_BODY }}
           echo "\`\`\`" >> ${{ env.ISSUE_BODY }}
           cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> ${{ env.ISSUE_BODY }}
