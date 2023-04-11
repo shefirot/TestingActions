@@ -94,4 +94,4 @@ jobs:
         run: |
           export GH_TOKEN=${{ github.TOKEN }}
           #cd ${{ github.WORKSPACE }}
-          ./gh issue create --title "${{ env.ISSUE_TITLE }}" --label "bug" --body-file ${{ env.ISSUE_BODY }} --repo $GITHUB_REPOSITORY
+          ./gh issue create --title "${{ env.ISSUE_TITLE }}" --label "bug,gitleaks" --body-file ${{ env.ISSUE_BODY }} --repo $GITHUB_REPOSITORY
