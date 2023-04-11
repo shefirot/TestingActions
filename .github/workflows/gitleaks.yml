@@ -27,6 +27,8 @@ jobs:
       contents: read
     env:
       GIT_LEAKS_DIR: ${{ github.WORKSPACE }}/gitleaks
+      ISSUE_TITLE: "Issue GitLeaks"
+      ISSUE_BODY: ${{ github.WORKSPACE }}/issue_body.md
     steps:
 
       - name: Checkout code
@@ -54,11 +56,28 @@ jobs:
       - name: Gen Issue body
         if: ${{ failure() && steps.scan.outcome == 'failure'}}
         run: |
-          echo "#SAST GitLeaks failed" > ${{ github.WORKSPACE }}/issue_body.md
-          echo "## Log Details" >> ${{ github.WORKSPACE }}/issue_body.md
-          echo "\`\`\`" >> ${{ github.WORKSPACE }}/issue_body.md
-          cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> ${{ github.WORKSPACE }}/issue_body.md
-          echo "\`\`\`" >> ${{ github.WORKSPACE }}/issue_body.md
+          echo "#SAST GitLeaks failed" > ${{ env.ISSUE_BODY }}
+          echo "## Log Details" >> ${{ env.ISSUE_BODY }}
+          echo "\`\`\`" >> ${{ env.ISSUE_BODY }}
+          cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> ${{ env.ISSUE_BODY }}
+          echo "\`\`\`" >> ${{ env.ISSUE_BODY }}
+
+      - name: Open Issue from curl
+        if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'API'}}
+        env:
+          issue_json: ${{ github.WORKSPACE }}/issue_data.json
+        run: |
+          echo '{ "title": "${{ env.ISSUE_TITLE }}",' > ${issue_json}
+          echo '"body": "' >> ${issue_json}
+          sed 's/$/\\n/' ${{ env.ISSUE_BODY }} >> ${issue_json}
+          echo '",' >> ${issue_json}
+          echo '"labels": ["bug","gitleaks"] }' >> ${issue_json}
+          curl -L   -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $(cat perpat)"  \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          --data  \
+          https://api.github.com/repos/shefirot/TestingActions/issues
 
       - name: Install gh cli
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
@@ -74,4 +93,4 @@ jobs:
         run: |
           export GH_TOKEN=${{ github.TOKEN }}
           #cd ${{ github.WORKSPACE }}
-          ./gh issue create --title "Issue GitLeaks" --body-file ${{ github.WORKSPACE }}/issue_body.md --repo $GITHUB_REPOSITORY
+          ./gh issue create --title ${{ env.ISSUE_TITLE }} --body-file ${{ env.ISSUE_BODY }} --repo $GITHUB_REPOSITORY
