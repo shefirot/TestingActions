@@ -53,11 +53,15 @@ jobs:
           ./gitleaks detect --redact -v -s ${{ github.WORKSPACE }} -r ${{ github.WORKSPACE }}/report_gitleaks.txt
          
       - name: Gen Issue body
+        # Conditional to run step if failure the action and de Gitleaks scan step
         if: ${{ failure() && steps.scan.outcome == 'failure'}}
         run: |
+          #Build Markdown body
           echo "# GitLeaks failed" > ${{ env.ISSUE_BODY }}
           echo "## Log Details" >> ${{ env.ISSUE_BODY }}
+          # Escape quoted Gitleaks output
           echo "\`\`\`" >> ${{ env.ISSUE_BODY }}
+          # Redirect Gitleak output
           cat ${{ github.WORKSPACE }}/report_gitleaks.txt >> ${{ env.ISSUE_BODY }}
           echo "\`\`\`" >> ${{ env.ISSUE_BODY }}
 
