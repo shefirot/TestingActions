@@ -89,6 +89,7 @@ jobs:
           https://api.github.com/repos/$GITHUB_REPOSITORY/issues
 
       - name: Install gh cli
+        # Conditional to run step if failure the action, Gitleaks scan step and select GH cli to create Issue
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
         run: |
           cd ${{ github.WORKSPACE }}
@@ -98,6 +99,7 @@ jobs:
           rm -f ./gh*.tar.gz >/dev/null 2>&1
 
       - name: Open Issue from GH cli
+        # Conditional to run step if failure the action, Gitleaks scan step and select GH cli to create Issue
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'GH-CLI'}}
         run: |
           export GH_TOKEN=${{ github.TOKEN }}
