@@ -66,6 +66,7 @@ jobs:
           echo "\`\`\`" >> ${{ env.ISSUE_BODY }}
 
       - name: Open Issue from curl
+        # Conditional to run step if failure the action, Gitleaks scan step and select API to create Issue
         if: ${{ failure() && steps.scan.outcome == 'failure' && inputs.who-open-issue == 'API'}}
         env:
           issue_json: ${{ github.WORKSPACE }}/issue_data.json
@@ -73,11 +74,13 @@ jobs:
           #Build all json body
           echo '{ "title": "${{ env.ISSUE_TITLE }}",' > ${issue_json}
           echo '"body": "' >> ${issue_json}
+          # Reformat issue body
           sed -i 's/"/\\"/g' ${{ env.ISSUE_BODY }}
           sed 's/$/\\n/' ${{ env.ISSUE_BODY }} >> ${issue_json}
           echo '",' >> ${issue_json}
           echo '"labels": ["bug","gitleaks","curl"] }' >> ${issue_json}
           cat ${issue_json}
+          # Generate issue
           curl -L   -X POST \
           -H "Accept: application/vnd.github+json" \
           -H "Authorization: Bearer ${{ github.TOKEN }}"  \
